@@ -1,0 +1,54 @@
+{
+  "hits": [
+    {
+      "id": "1003",
+      "title": "Running Print",
+      "deviceName": "X1C-A",
+      "status": "RUNNING",
+      "startTime": "2026-07-31T10:00:00Z",
+      "costTime": 0,
+      "amsDetailMapping": []
+    },
+    {
+      "id": "1002",
+      "title": "Two Color Vase",
+      "deviceName": "X1C-A",
+      "status": "FAILED",
+      "startTime": "2026-07-30T09:00:00Z",
+      "costTime": 1800,
+      "amsDetailMapping": [
+        {
+          "amsId": 0,
+          "slotId": 1,
+          "filamentType": "PLA",
+          "targetColor": "FF0000FF",
+          "weight": 12.5
+        },
+        {
+          "amsId": 0,
+          "slotId": 2,
+          "filamentType": "PLA",
+          "targetColor": "0000FFFF",
+          "weight": 8.25
+        }
+      ]
+    },
+    {
+      "id": "1001",
+      "title": "Single Color Bracket",
+      "deviceName": "X1C-A",
+      "status": "FINISH",
+      "startTime": "2026-07-29T08:00:00Z",
+      "costTime": 3600,
+      "amsDetailMapping": [
+        {
+          "amsId": 0,
+          "slotId": 0,
+          "filamentType": "PETG",
+          "targetColor": "00FF00FF",
+          "weight": 20.0
+        }
+      ]
+    }
+  ]
+}
