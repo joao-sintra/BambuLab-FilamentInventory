@@ -1,13 +1,12 @@
 import json
 import os
-from typing import Optional
 
 
 class StateStore:
     def __init__(self, path: str):
         self._path = path
 
-    def get_last_seen_id(self) -> Optional[str]:
+    def get_last_seen_id(self) -> str | None:
         if not os.path.exists(self._path):
             return None
         with open(self._path, "r") as f:
