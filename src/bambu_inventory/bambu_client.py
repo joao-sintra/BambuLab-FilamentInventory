@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import json
 import requests
 
@@ -38,6 +40,22 @@ class BambuClient:
     def _load_token(self) -> str:
         with open(self._token_path) as f:
             return json.load(f)["token"]
+
+    def _load_refresh_token(self) -> str:
+        with open(self._token_path) as f:
+            return json.load(f)["refresh_token"]
+
+    def refresh(self) -> bool:
+        refresh_token = self._load_refresh_token()
+        response = requests.post(
+            f"{BASE_URL}/v1/user-service/user/login",
+            json={"refreshToken": refresh_token},
+        )
+        if response.status_code != 200:
+            return False
+        data = response.json()
+        self._save_token(data["accessToken"], data["refreshToken"])
+        return True
 
     def get_tasks(self, limit: int = 20) -> list[dict]:
         token = self._load_token()

@@ -21,8 +21,10 @@ def run_poll_cycle(bambu: BambuClient, sheets: SheetsClient, state: StateStore) 
     try:
         tasks = bambu.get_tasks(limit=20)
     except AuthExpiredError:
-        log.warning("Bambu token expired, re-authenticating (may require emailed code)")
-        bambu.login(verify_code_prompt=prompt_for_verification_code)
+        log.warning("Bambu token expired, attempting refresh")
+        if not bambu.refresh():
+            log.warning("Refresh failed, re-authenticating (may require emailed code)")
+            bambu.login(verify_code_prompt=prompt_for_verification_code)
         tasks = bambu.get_tasks(limit=20)
 
     last_seen_id = state.get_last_seen_id()
@@ -42,6 +44,23 @@ def run_poll_cycle(bambu: BambuClient, sheets: SheetsClient, state: StateStore) 
         log.info(f"Logged task {task['id']} ({task['title']}) - {len(rows)} row(s)")
 
 
+def save_spreadsheet_id_to_env(spreadsheet_id: str, env_path: str = ".env") -> None:
+    lines = []
+    found = False
+    if os.path.exists(env_path):
+        with open(env_path) as f:
+            lines = f.readlines()
+    for i, line in enumerate(lines):
+        if line.startswith("SPREADSHEET_ID="):
+            lines[i] = f"SPREADSHEET_ID={spreadsheet_id}\n"
+            found = True
+            break
+    if not found:
+        lines.append(f"SPREADSHEET_ID={spreadsheet_id}\n")
+    with open(env_path, "w") as f:
+        f.writelines(lines)
+
+
 def main() -> None:
     load_dotenv()
     email = os.environ["BAMBU_EMAIL"]
@@ -56,7 +75,8 @@ def main() -> None:
     sheets = SheetsClient("credentials.json", spreadsheet_id)
     resolved_id = sheets.ensure_spreadsheet()
     if not spreadsheet_id:
-        log.info(f"Created new spreadsheet. Save this to .env as SPREADSHEET_ID={resolved_id}")
+        save_spreadsheet_id_to_env(resolved_id)
+        log.info(f"Created new spreadsheet. Saved SPREADSHEET_ID={resolved_id} to .env")
 
     state = StateStore("state.json")
 

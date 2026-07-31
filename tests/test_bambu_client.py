@@ -55,6 +55,38 @@ def test_get_tasks_returns_hits_list(tmp_path):
     assert called_headers["Authorization"] == "Bearer tok123"
 
 
+def test_refresh_saves_new_token_on_success(tmp_path):
+    token_path = str(tmp_path / "token.json")
+    with open(token_path, "w") as f:
+        json.dump({"token": "old", "refresh_token": "ref123"}, f)
+    client = BambuClient("a@b.com", "pw", token_path)
+
+    refresh_response = MagicMock(status_code=200)
+    refresh_response.json.return_value = {"accessToken": "newtok", "refreshToken": "newref"}
+
+    with patch("bambu_inventory.bambu_client.requests.post", return_value=refresh_response) as mock_post:
+        result = client.refresh()
+
+    assert result is True
+    with open(token_path) as f:
+        saved = json.load(f)
+    assert saved == {"token": "newtok", "refresh_token": "newref"}
+
+
+def test_refresh_returns_false_on_failure(tmp_path):
+    token_path = str(tmp_path / "token.json")
+    with open(token_path, "w") as f:
+        json.dump({"token": "old", "refresh_token": "ref123"}, f)
+    client = BambuClient("a@b.com", "pw", token_path)
+
+    refresh_response = MagicMock(status_code=401)
+
+    with patch("bambu_inventory.bambu_client.requests.post", return_value=refresh_response):
+        result = client.refresh()
+
+    assert result is False
+
+
 def test_get_tasks_raises_auth_expired_on_401(tmp_path):
     token_path = str(tmp_path / "token.json")
     with open(token_path, "w") as f:

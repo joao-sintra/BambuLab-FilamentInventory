@@ -24,6 +24,10 @@ def test_is_terminal_status_true_for_finish_and_failed():
     assert is_terminal_status("FAILED") is True
 
 
+def test_is_terminal_status_false_for_unrecognized_intermediate_status():
+    assert is_terminal_status("PAUSE") is False
+
+
 def test_status_label_maps_known_values():
     assert status_label("FINISH") == "finished"
     assert status_label("FAILED") == "failed"
@@ -52,6 +56,18 @@ def test_filter_new_terminal_tasks_returns_only_newer_than_last_seen():
     result = filter_new_terminal_tasks(tasks, last_seen_id="1001")
     ids = [t["id"] for t in result]
     assert ids == ["1002"]
+
+
+def test_filter_new_terminal_tasks_handles_digit_length_rollover():
+    tasks = [
+        {
+            "id": "100000000", "title": "New Print", "deviceName": "X1C-A",
+            "status": "FINISH", "startTime": "2026-08-01T00:00:00Z", "costTime": 60,
+            "amsDetailMapping": [],
+        }
+    ]
+    result = filter_new_terminal_tasks(tasks, last_seen_id="99999999")
+    assert len(result) == 1
 
 
 def test_task_to_rows_expands_multi_color_task():
