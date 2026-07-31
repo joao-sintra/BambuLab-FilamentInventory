@@ -1,7 +1,7 @@
 .env
-credentials.json
 .bambu_token.json
 state.json
+filament_inventory.xlsx
 __pycache__/
 *.pyc
 .pytest_cache/
