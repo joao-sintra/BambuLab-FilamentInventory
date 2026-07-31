@@ -18,6 +18,37 @@ Sheet.
 5. Leave the process running (or wire it to Windows Task Scheduler as a
    background/startup task) to keep logging new prints as they finish.
 
+## Google/SSO accounts (no Bambu password)
+
+If your Bambu account signs in via Google (i.e. you have no separate Bambu
+password), leave `BAMBU_PASSWORD` blank in `.env`. The script's interactive
+email+password login can't work for these accounts, so you need to seed it
+with a valid token manually:
+
+1. Log into [bambulab.com](https://bambulab.com) (or the Bambu Handy app)
+   using your Google account.
+2. Open your browser's devtools → Network tab (in the app, use a proxy tool
+   like Proxyman/Charles if devtools aren't available).
+3. Find a request to `api.bambulab.com` that includes an
+   `Authorization: Bearer <token>` header — that header value is your access
+   token. Also look for the login/refresh response body, which contains
+   `accessToken` and `refreshToken` fields — this is the same shape the
+   script itself would have written, had it logged in with a password.
+4. Create `.bambu_token.json` in the project root with exactly this shape:
+
+   ```json
+   {"token": "<access token>", "refresh_token": "<refresh token>"}
+   ```
+
+5. Run `python -m bambu_inventory.main` as normal. Since the token file
+   already exists, the script skips interactive login and uses this token
+   directly, automatically refreshing it via the refresh-token flow as it
+   expires — no password ever required.
+
+If the refresh token itself eventually expires (Bambu tokens are long-lived
+but not permanent), the script will log an error asking you to repeat this
+manual extraction — it cannot prompt you for a Google login itself.
+
 ## Verifying task status codes against your account
 
 `task_mapper.py` classifies task status using values documented by the

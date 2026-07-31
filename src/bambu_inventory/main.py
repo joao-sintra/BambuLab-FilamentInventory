@@ -23,8 +23,16 @@ def run_poll_cycle(bambu: BambuClient, sheets: SheetsClient, state: StateStore) 
     except AuthExpiredError:
         log.warning("Bambu token expired, attempting refresh")
         if not bambu.refresh():
-            log.warning("Refresh failed, re-authenticating (may require emailed code)")
-            bambu.login(verify_code_prompt=prompt_for_verification_code)
+            if bambu._password:
+                log.warning("Refresh failed, re-authenticating (may require emailed code)")
+                bambu.login(verify_code_prompt=prompt_for_verification_code)
+            else:
+                log.error(
+                    "Refresh failed and no BAMBU_PASSWORD configured for interactive "
+                    "re-login. Manually re-extract a token as described in the README's "
+                    "'Google/SSO accounts' section and save it to .bambu_token.json."
+                )
+                return
         tasks = bambu.get_tasks(limit=20)
 
     last_seen_id = state.get_last_seen_id()
@@ -64,13 +72,22 @@ def save_spreadsheet_id_to_env(spreadsheet_id: str, env_path: str = ".env") -> N
 def main() -> None:
     load_dotenv()
     email = os.environ["BAMBU_EMAIL"]
-    password = os.environ["BAMBU_PASSWORD"]
+    password = os.environ.get("BAMBU_PASSWORD", "")
     spreadsheet_id = os.environ.get("SPREADSHEET_ID") or None
     poll_interval = int(os.environ.get("POLL_INTERVAL_SEC", "300"))
 
     bambu = BambuClient(email, password, token_path=".bambu_token.json")
     if not os.path.exists(".bambu_token.json"):
-        bambu.login(verify_code_prompt=prompt_for_verification_code)
+        if password:
+            bambu.login(verify_code_prompt=prompt_for_verification_code)
+        else:
+            log.error(
+                "No cached token found and no BAMBU_PASSWORD configured. "
+                "If your account uses Google/SSO sign-in, manually extract a token "
+                "as described in the README's 'Google/SSO accounts' section and "
+                "save it to .bambu_token.json, then re-run."
+            )
+            return
 
     sheets = SheetsClient("credentials.json", spreadsheet_id)
     resolved_id = sheets.ensure_spreadsheet()
