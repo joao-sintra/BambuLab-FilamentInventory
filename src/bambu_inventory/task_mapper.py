@@ -1,27 +1,29 @@
 from __future__ import annotations
 
-# NOTE: status strings confirmed from community docs for RUNNING/FINISH/FAILED.
-# This is a whitelist by design: only statuses confirmed terminal are treated
-# as terminal. Any unrecognized/unforeseen status (e.g. "PAUSE", "HEATING")
-# is treated as non-terminal and skipped rather than logged and advanced
-# past - misclassifying an unknown intermediate status as terminal would
-# permanently exclude the print's real completion row via the last_seen_id
-# dedup check once the task actually finishes. Verify unrecognized statuses
-# against a real account (see README's debug-dump step) and add them here
-# once confirmed terminal.
-TERMINAL_STATUSES = {"FINISH", "FAILED"}
+# NOTE: status is an integer code, confirmed against a real account (not the
+# string codes some community docs describe). Confirmed so far: 2 = finished
+# successfully, 3 = user-cancelled/stopped. This is a whitelist by design:
+# only statuses confirmed terminal are treated as terminal. Any
+# unrecognized/unforeseen status (e.g. a genuine print-error code, or an
+# in-progress code) is treated as non-terminal and skipped rather than
+# logged and advanced past - misclassifying an unknown status as terminal
+# would permanently exclude the print's real completion row via the
+# last_seen_id dedup check once the task actually finishes. Verify
+# unrecognized statuses against your account (see README's debug-dump step)
+# and add them here once confirmed.
+TERMINAL_STATUSES = {2, 3}
 
 STATUS_LABELS = {
-    "FINISH": "finished",
-    "FAILED": "failed",
+    2: "finished",
+    3: "cancelled",
 }
 
 
-def is_terminal_status(status: str) -> bool:
+def is_terminal_status(status: int) -> bool:
     return status in TERMINAL_STATUSES
 
 
-def status_label(status: str) -> str:
+def status_label(status: int) -> str:
     return STATUS_LABELS.get(status, "unknown")
 
 

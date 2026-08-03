@@ -51,10 +51,14 @@ manual extraction — it cannot prompt you for a Google login itself.
 
 ## Verifying task status codes against your account
 
-`task_mapper.py` classifies task status using values documented by the
-community — only `FINISH` and `FAILED` are treated as terminal (safe
-whitelist; unrecognized statuses are skipped, not misclassified). Before
-relying on this unattended, confirm your account returns the same values:
+`task_mapper.py` classifies task status using an integer code (not the
+string codes some community docs describe). Confirmed against a real
+account: `2` = finished successfully, `3` = user-cancelled/stopped — a
+genuine print-error code hasn't been observed yet. This is a safe
+whitelist: only confirmed-terminal codes are treated as terminal;
+unrecognized codes (e.g. an in-progress or error status not seen yet) are
+skipped, not misclassified. If your account behaves differently, confirm
+with:
 
 ```python
 from dotenv import load_dotenv
@@ -62,11 +66,11 @@ import os
 from bambu_inventory.bambu_client import BambuClient
 
 load_dotenv()
-client = BambuClient(os.environ["BAMBU_EMAIL"], os.environ["BAMBU_PASSWORD"], ".bambu_token.json")
+client = BambuClient(os.environ["BAMBU_EMAIL"], os.environ.get("BAMBU_PASSWORD", ""), ".bambu_token.json")
 for task in client.get_tasks(limit=20):
     print(task["id"], task["status"], task["title"])
 ```
 
-If your account shows different status strings (e.g. for a user-cancelled
-print), add them to `TERMINAL_STATUSES` and `STATUS_LABELS` in
-`src/bambu_inventory/task_mapper.py`.
+If you see a status code not in `TERMINAL_STATUSES` for a print that
+actually finished or failed with an error, add it to `TERMINAL_STATUSES`
+and `STATUS_LABELS` in `src/bambu_inventory/task_mapper.py`.

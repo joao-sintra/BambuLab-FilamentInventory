@@ -16,25 +16,25 @@ def load_tasks():
 
 
 def test_is_terminal_status_false_for_running():
-    assert is_terminal_status("RUNNING") is False
+    assert is_terminal_status(1) is False
 
 
-def test_is_terminal_status_true_for_finish_and_failed():
-    assert is_terminal_status("FINISH") is True
-    assert is_terminal_status("FAILED") is True
+def test_is_terminal_status_true_for_finished_and_cancelled():
+    assert is_terminal_status(2) is True
+    assert is_terminal_status(3) is True
 
 
 def test_is_terminal_status_false_for_unrecognized_intermediate_status():
-    assert is_terminal_status("PAUSE") is False
+    assert is_terminal_status(99) is False
 
 
 def test_status_label_maps_known_values():
-    assert status_label("FINISH") == "finished"
-    assert status_label("FAILED") == "failed"
+    assert status_label(2) == "finished"
+    assert status_label(3) == "cancelled"
 
 
 def test_status_label_returns_unknown_for_unrecognized_value():
-    assert status_label("SOMETHING_NEW") == "unknown"
+    assert status_label(99) == "unknown"
 
 
 def test_filter_new_terminal_tasks_excludes_running():
@@ -62,7 +62,7 @@ def test_filter_new_terminal_tasks_handles_digit_length_rollover():
     tasks = [
         {
             "id": "100000000", "title": "New Print", "deviceName": "X1C-A",
-            "status": "FINISH", "startTime": "2026-08-01T00:00:00Z", "costTime": 60,
+            "status": 2, "startTime": "2026-08-01T00:00:00Z", "costTime": 60,
             "amsDetailMapping": [],
         }
     ]
@@ -77,7 +77,7 @@ def test_task_to_rows_expands_multi_color_task():
     assert len(rows) == 2
     assert rows[0]["task_id"] == "1002"
     assert rows[0]["print_name"] == "Two Color Vase"
-    assert rows[0]["status"] == "failed"
+    assert rows[0]["status"] == "cancelled"
     assert rows[0]["duration_min"] == 30
     assert rows[0]["ams_slot"] == "0-1"
     assert rows[0]["filament_type"] == "PLA"

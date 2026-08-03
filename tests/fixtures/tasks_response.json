@@ -4,7 +4,7 @@
       "id": "1003",
       "title": "Running Print",
       "deviceName": "X1C-A",
-      "status": "RUNNING",
+      "status": 1,
       "startTime": "2026-07-31T10:00:00Z",
       "costTime": 0,
       "amsDetailMapping": []
@@ -13,7 +13,7 @@
       "id": "1002",
       "title": "Two Color Vase",
       "deviceName": "X1C-A",
-      "status": "FAILED",
+      "status": 3,
       "startTime": "2026-07-30T09:00:00Z",
       "costTime": 1800,
       "amsDetailMapping": [
@@ -37,7 +37,7 @@
       "id": "1001",
       "title": "Single Color Bracket",
       "deviceName": "X1C-A",
-      "status": "FINISH",
+      "status": 2,
       "startTime": "2026-07-29T08:00:00Z",
       "costTime": 3600,
       "amsDetailMapping": [
