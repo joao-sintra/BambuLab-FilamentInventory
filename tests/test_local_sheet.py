@@ -2,6 +2,7 @@ import os
 from openpyxl import Workbook, load_workbook
 from bambu_inventory.local_sheet import (
     LocalSheetWriter, HEADER, SHEET_NAME, INVENTORY_SHEET_NAME, INVENTORY_HEADER,
+    _argb_from_bambu_hex, _contrast_font_argb,
 )
 
 
@@ -57,6 +58,24 @@ def test_append_rows_writes_values_in_header_order(tmp_path):
         "2026-07-30T09:00:00Z", "Two Color Vase", "X1C-A", "failed", 30,
         "0-1", "PLA", "FF0000FF", 12.5, "1002",
     ]
+
+
+def test_append_rows_fills_colour_cell_background_with_actual_colour(tmp_path):
+    path = str(tmp_path / "inventory.xlsx")
+    writer = LocalSheetWriter(path)
+    writer.ensure_workbook()
+    row = {
+        "date": "d", "print_name": "p", "printer": "pr", "status": "finished",
+        "duration_min": 1, "ams_slot": "0-0", "filament_type": "PLA",
+        "colour_hex": "FF0000FF", "weight_g": 1.0, "task_id": "1",
+    }
+
+    writer.append_rows([row])
+
+    workbook = load_workbook(path)
+    sheet = workbook[SHEET_NAME]
+    colour_cell = sheet.cell(row=2, column=8)
+    assert colour_cell.fill.fgColor.rgb == "FFFF0000"
 
 
 def test_append_rows_appends_multiple_calls_without_overwriting(tmp_path):
@@ -141,6 +160,44 @@ def test_sync_filament_inventory_writes_formula_into_matching_row(tmp_path):
     sheet = result[INVENTORY_SHEET_NAME]
     formula = sheet.cell(row=2, column=4).value
     assert formula == "=C2-SUMIFS(PrintLog!I:I,PrintLog!G:G,A2,PrintLog!H:H,B2)"
+
+
+def test_sync_filament_inventory_fills_colour_cell_background(tmp_path):
+    path = str(tmp_path / "inventory.xlsx")
+    workbook = Workbook()
+    workbook.remove(workbook.active)
+    sheet = workbook.create_sheet(INVENTORY_SHEET_NAME)
+    sheet.append(INVENTORY_HEADER)
+    workbook.save(path)
+
+    writer = LocalSheetWriter(path)
+    writer.sync_filament_inventory([_make_row(colour_hex="0000FFFF")])
+
+    result = load_workbook(path)
+    sheet = result[INVENTORY_SHEET_NAME]
+    colour_cell = sheet.cell(row=2, column=2)
+    assert colour_cell.fill.fgColor.rgb == "FF0000FF"
+
+
+def test_argb_from_bambu_hex_converts_rgba_to_argb():
+    assert _argb_from_bambu_hex("FF0000FF") == "FFFF0000"
+    assert _argb_from_bambu_hex("161616FF") == "FF161616"
+
+
+def test_argb_from_bambu_hex_defaults_alpha_for_six_char_input():
+    assert _argb_from_bambu_hex("00FF00") == "FF00FF00"
+
+
+def test_argb_from_bambu_hex_returns_none_for_invalid_input():
+    assert _argb_from_bambu_hex("not-a-colour") is None
+
+
+def test_contrast_font_argb_picks_black_for_light_background():
+    assert _contrast_font_argb("FFFFFFFF") == "FF000000"
+
+
+def test_contrast_font_argb_picks_white_for_dark_background():
+    assert _contrast_font_argb("FF000000") == "FFFFFFFF"
 
 
 def test_sync_filament_inventory_creates_row_when_no_match(tmp_path):

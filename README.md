@@ -17,6 +17,9 @@ finished/failed/cancelled print's per-colour filament weight to a local
      header row if it doesn't already exist.
 4. Leave the process running (or wire it to Windows Task Scheduler as a
    background/startup task) to keep logging new prints as they finish.
+   - Every `Colour (hex)` cell in `PrintLog` (and `Colour` cell in
+     `Filament Inventory`, see below) has its background filled with the
+     actual colour, with text colour auto-picked for readability.
 
 ## Filament Inventory sheet (optional, tracks remaining spool weight)
 
