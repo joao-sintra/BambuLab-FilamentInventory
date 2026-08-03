@@ -18,6 +18,25 @@ finished/failed/cancelled print's per-colour filament weight to a local
 4. Leave the process running (or wire it to Windows Task Scheduler as a
    background/startup task) to keep logging new prints as they finish.
 
+## Filament Inventory sheet (optional, tracks remaining spool weight)
+
+If the workbook has a tab named exactly `Filament Inventory` with columns
+`Filament Type | Colour | Total Weight (g) | Remaining Weight (g)`, the
+script automatically deducts each print's filament weight from the
+matching row's `Remaining Weight (g)` every time it logs a print to
+`PrintLog`. Matching is by exact `Filament Type` + `Colour` (the same hex
+code shown in `PrintLog`'s `Colour (hex)` column, e.g. `FF0000FF`).
+
+If a print uses a filament type/colour combination not already in the
+sheet, a new row is added automatically with `Total Weight (g)` left blank
+and `Remaining Weight (g)` starting negative (since nothing was tracked
+before that print). Fill in the real `Total Weight (g)` for a new spool
+once you notice a new row appear, so future deductions read against
+something meaningful.
+
+If the `Filament Inventory` tab doesn't exist yet, it's created
+automatically on the first print that needs it.
+
 ## Google/SSO accounts (no Bambu password)
 
 If your Bambu account signs in via Google (i.e. you have no separate Bambu

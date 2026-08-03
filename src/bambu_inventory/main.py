@@ -48,6 +48,7 @@ def run_poll_cycle(bambu: BambuClient, sheet: LocalSheetWriter, state: StateStor
         rows = task_to_rows(task)
         if rows:
             sheet.append_rows(rows)
+            sheet.deduct_filament_usage(rows)
         state.set_last_seen_id(task["id"])
         log.info(f"Logged task {task['id']} ({task['title']}) - {len(rows)} row(s)")
 
@@ -57,7 +58,7 @@ def main() -> None:
     email = os.environ["BAMBU_EMAIL"]
     password = os.environ.get("BAMBU_PASSWORD", "")
     output_path = os.environ.get("OUTPUT_XLSX_PATH", "filament_inventory.xlsx")
-    poll_interval = int(os.environ.get("POLL_INTERVAL_SEC", "30"))
+    poll_interval = int(os.environ.get("POLL_INTERVAL_SEC", "300"))
 
     bambu = BambuClient(email, password, token_path=".bambu_token.json")
     if not os.path.exists(".bambu_token.json"):

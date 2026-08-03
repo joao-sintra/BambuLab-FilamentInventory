@@ -15,6 +15,15 @@ ROW_KEYS = [
     "ams_slot", "filament_type", "colour_hex", "weight_g", "task_id",
 ]
 
+INVENTORY_SHEET_NAME = "Filament Inventory"
+INVENTORY_HEADER = [
+    "Filament Type", "Colour", "Total Weight (g)", "Remaining Weight (g)",
+]
+# column indices (1-based, openpyxl convention) within INVENTORY_HEADER
+INVENTORY_COL_FILAMENT_TYPE = 1
+INVENTORY_COL_COLOUR = 2
+INVENTORY_COL_REMAINING = 4
+
 
 class LocalSheetWriter:
     def __init__(self, path: str):
@@ -36,4 +45,33 @@ class LocalSheetWriter:
         sheet = workbook[SHEET_NAME]
         for row in rows:
             sheet.append([row[key] for key in ROW_KEYS])
+        workbook.save(self._path)
+
+    def deduct_filament_usage(self, rows: list[dict]) -> None:
+        workbook = load_workbook(self._path)
+        if INVENTORY_SHEET_NAME not in workbook.sheetnames:
+            sheet = workbook.create_sheet(INVENTORY_SHEET_NAME)
+            sheet.append(INVENTORY_HEADER)
+        else:
+            sheet = workbook[INVENTORY_SHEET_NAME]
+
+        for row in rows:
+            match = None
+            for existing_row in sheet.iter_rows(min_row=2):
+                if (
+                    existing_row[INVENTORY_COL_FILAMENT_TYPE - 1].value == row["filament_type"]
+                    and existing_row[INVENTORY_COL_COLOUR - 1].value == row["colour_hex"]
+                ):
+                    match = existing_row
+                    break
+
+            if match is not None:
+                remaining_cell = match[INVENTORY_COL_REMAINING - 1]
+                current = remaining_cell.value or 0
+                remaining_cell.value = current - row["weight_g"]
+            else:
+                sheet.append([
+                    row["filament_type"], row["colour_hex"], "", -row["weight_g"],
+                ])
+
         workbook.save(self._path)
