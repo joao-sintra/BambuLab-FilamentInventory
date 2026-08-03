@@ -57,7 +57,7 @@ def main() -> None:
     email = os.environ["BAMBU_EMAIL"]
     password = os.environ.get("BAMBU_PASSWORD", "")
     output_path = os.environ.get("OUTPUT_XLSX_PATH", "filament_inventory.xlsx")
-    poll_interval = int(os.environ.get("POLL_INTERVAL_SEC", "300"))
+    poll_interval = int(os.environ.get("POLL_INTERVAL_SEC", "30"))
 
     bambu = BambuClient(email, password, token_path=".bambu_token.json")
     if not os.path.exists(".bambu_token.json"):
