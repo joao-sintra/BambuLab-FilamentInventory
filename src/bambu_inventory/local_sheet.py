@@ -1,8 +1,11 @@
 from __future__ import annotations
 
+import logging
 import os
 
 from openpyxl import Workbook, load_workbook
+
+log = logging.getLogger("bambu_inventory")
 
 SHEET_NAME = "PrintLog"
 HEADER = [
@@ -22,6 +25,7 @@ INVENTORY_HEADER = [
 # column indices (1-based, openpyxl convention) within INVENTORY_HEADER
 INVENTORY_COL_FILAMENT_TYPE = 1
 INVENTORY_COL_COLOUR = 2
+INVENTORY_COL_TOTAL = 3
 INVENTORY_COL_REMAINING = 4
 
 
@@ -67,11 +71,29 @@ class LocalSheetWriter:
 
             if match is not None:
                 remaining_cell = match[INVENTORY_COL_REMAINING - 1]
-                current = remaining_cell.value or 0
-                remaining_cell.value = current - row["weight_g"]
+                total_cell = match[INVENTORY_COL_TOTAL - 1]
+                # Remaining Weight seeds from Total Weight the first time this
+                # spool is used (i.e. Remaining is still blank) rather than
+                # always starting from 0 - otherwise filling in Total Weight
+                # after the fact never corrects an already-negative Remaining.
+                if remaining_cell.value is None:
+                    baseline = total_cell.value if total_cell.value is not None else 0
+                else:
+                    baseline = remaining_cell.value
+                new_remaining = baseline - row["weight_g"]
+                remaining_cell.value = new_remaining
+                log.info(
+                    f"Filament Inventory: {row['filament_type']} {row['colour_hex']} "
+                    f"-{row['weight_g']}g -> {new_remaining}g remaining"
+                )
             else:
                 sheet.append([
                     row["filament_type"], row["colour_hex"], "", -row["weight_g"],
                 ])
+                log.info(
+                    f"Filament Inventory: no matching row for {row['filament_type']} "
+                    f"{row['colour_hex']}, added new row (-{row['weight_g']}g, "
+                    f"fill in Total Weight (g) to track it properly)"
+                )
 
         workbook.save(self._path)

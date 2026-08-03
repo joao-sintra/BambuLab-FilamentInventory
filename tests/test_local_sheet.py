@@ -151,3 +151,25 @@ def test_deduct_filament_usage_matches_only_exact_type_and_colour(tmp_path):
     assert sheet.max_row == 3
     assert sheet.cell(row=2, column=4).value == 500
     assert [cell.value for cell in sheet[3]] == ["PLA", "FF0000FF", None, -10.0]
+
+
+def test_deduct_filament_usage_seeds_remaining_from_total_when_blank(tmp_path):
+    path = str(tmp_path / "inventory.xlsx")
+    workbook = Workbook()
+    workbook.remove(workbook.active)
+    sheet = workbook.create_sheet(INVENTORY_SHEET_NAME)
+    sheet.append(INVENTORY_HEADER)
+    # row added earlier by auto-create (Total blank, Remaining negative);
+    # user has since filled in Total Weight but Remaining is still blank
+    # because auto-create only sets it negative, never blank+Total together -
+    # this simulates a row where the user typed Total Weight into a fresh
+    # row with Remaining left empty.
+    sheet.append(["PLA", "FF0000FF", 1000, None])
+    workbook.save(path)
+
+    writer = LocalSheetWriter(path)
+    writer.deduct_filament_usage([_make_row(weight_g=12.5)])
+
+    result = load_workbook(path)
+    sheet = result[INVENTORY_SHEET_NAME]
+    assert sheet.cell(row=2, column=4).value == 987.5
