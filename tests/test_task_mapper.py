@@ -82,9 +82,10 @@ def test_task_to_rows_expands_multi_color_task():
     assert rows[0]["ams_slot"] == "0-1"
     assert rows[0]["filament_type"] == "PLA"
     assert rows[0]["colour_hex"] == "FF0000FF"
-    assert rows[0]["weight_g"] == 12.5
+    # planned weight 8.0g scaled by elapsed/costTime = 450s/1800s = 0.25 -> 2.0g
+    assert rows[0]["weight_g"] == 2.0
     assert rows[1]["ams_slot"] == "0-2"
-    assert rows[1]["weight_g"] == 8.25
+    assert rows[1]["weight_g"] == 4.0
 
 
 def test_task_to_rows_single_color_task():
@@ -94,3 +95,62 @@ def test_task_to_rows_single_color_task():
     assert len(rows) == 1
     assert rows[0]["status"] == "finished"
     assert rows[0]["duration_min"] == 60
+    # finished prints are never scaled, even though this fixture's
+    # startTime/endTime elapsed (3600s) happens to equal costTime here
+    assert rows[0]["weight_g"] == 20.0
+
+
+def test_task_to_rows_does_not_scale_finished_print_weight_even_if_elapsed_time_is_short():
+    task = {
+        "id": "2001", "title": "Fast Finish", "deviceName": "X1C-A",
+        "status": 2, "startTime": "2026-08-01T00:00:00Z",
+        "endTime": "2026-08-01T00:01:00Z", "costTime": 3600,
+        "amsDetailMapping": [{
+            "amsId": 0, "slotId": 0, "filamentType": "PLA",
+            "targetColor": "FFFFFFFF", "weight": 50.0,
+        }],
+    }
+    rows = task_to_rows(task)
+    assert rows[0]["weight_g"] == 50.0
+
+
+def test_task_to_rows_scales_cancelled_print_weight_by_elapsed_ratio():
+    task = {
+        "id": "2002", "title": "Half Cancelled", "deviceName": "X1C-A",
+        "status": 3, "startTime": "2026-08-01T00:00:00Z",
+        "endTime": "2026-08-01T00:10:00Z", "costTime": 1200,
+        "amsDetailMapping": [{
+            "amsId": 0, "slotId": 0, "filamentType": "PLA",
+            "targetColor": "FFFFFFFF", "weight": 400.0,
+        }],
+    }
+    rows = task_to_rows(task)
+    # elapsed 600s / costTime 1200s = 0.5 -> 200.0g
+    assert rows[0]["weight_g"] == 200.0
+
+
+def test_task_to_rows_falls_back_to_full_weight_when_cost_time_is_zero():
+    task = {
+        "id": "2003", "title": "Zero Cost Time", "deviceName": "X1C-A",
+        "status": 3, "startTime": "2026-08-01T00:00:00Z",
+        "endTime": "2026-08-01T00:00:05Z", "costTime": 0,
+        "amsDetailMapping": [{
+            "amsId": 0, "slotId": 0, "filamentType": "PLA",
+            "targetColor": "FFFFFFFF", "weight": 10.0,
+        }],
+    }
+    rows = task_to_rows(task)
+    assert rows[0]["weight_g"] == 10.0
+
+
+def test_task_to_rows_falls_back_to_full_weight_when_end_time_missing():
+    task = {
+        "id": "2004", "title": "No End Time", "deviceName": "X1C-A",
+        "status": 3, "startTime": "2026-08-01T00:00:00Z", "costTime": 1200,
+        "amsDetailMapping": [{
+            "amsId": 0, "slotId": 0, "filamentType": "PLA",
+            "targetColor": "FFFFFFFF", "weight": 10.0,
+        }],
+    }
+    rows = task_to_rows(task)
+    assert rows[0]["weight_g"] == 10.0

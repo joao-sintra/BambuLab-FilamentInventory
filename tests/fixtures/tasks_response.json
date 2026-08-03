@@ -15,6 +15,7 @@
       "deviceName": "X1C-A",
       "status": 3,
       "startTime": "2026-07-30T09:00:00Z",
+      "endTime": "2026-07-30T09:07:30Z",
       "costTime": 1800,
       "amsDetailMapping": [
         {
@@ -22,14 +23,14 @@
           "slotId": 1,
           "filamentType": "PLA",
           "targetColor": "FF0000FF",
-          "weight": 12.5
+          "weight": 8.0
         },
         {
           "amsId": 0,
           "slotId": 2,
           "filamentType": "PLA",
           "targetColor": "0000FFFF",
-          "weight": 8.25
+          "weight": 16.0
         }
       ]
     },
@@ -39,6 +40,7 @@
       "deviceName": "X1C-A",
       "status": 2,
       "startTime": "2026-07-29T08:00:00Z",
+      "endTime": "2026-07-29T09:00:00Z",
       "costTime": 3600,
       "amsDetailMapping": [
         {

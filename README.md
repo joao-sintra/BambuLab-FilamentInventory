@@ -93,3 +93,18 @@ for task in client.get_tasks(limit=20):
 If you see a status code not in `TERMINAL_STATUSES` for a print that
 actually finished or failed with an error, add it to `TERMINAL_STATUSES`
 and `STATUS_LABELS` in `src/bambu_inventory/task_mapper.py`.
+
+## Partial-weight estimate for cancelled prints
+
+`amsDetailMapping[].weight` and `costTime` are the slicer's *full planned*
+values regardless of cancellation — confirmed against a live account: a
+cancelled task's `costTime` is far larger than its actual
+`endTime - startTime` elapsed duration. So a print stopped halfway would
+otherwise register a full print's worth of "wasted" filament.
+
+For any non-finished terminal status (currently just `cancelled`), the
+logged weight is scaled by `elapsed_time / costTime` — e.g. a 400g print
+stopped at roughly the halfway mark logs ~200g, not 400g. Finished prints
+are never scaled. If the ratio can't be computed (missing `endTime`, or
+`costTime` is `0`), it falls back to the full planned weight rather than
+guessing.
