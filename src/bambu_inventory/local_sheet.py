@@ -45,9 +45,21 @@ class LocalSheetWriter:
         return self._path
 
     def append_rows(self, rows: list[dict]) -> None:
+        # Idempotency guard: if a poll cycle logs a task successfully but a
+        # later step (e.g. sync_filament_inventory) fails before state
+        # advances, the same task gets retried and would otherwise be
+        # appended again on every retry. Skip any row whose Task ID already
+        # appears in the sheet.
         workbook = load_workbook(self._path)
         sheet = workbook[SHEET_NAME]
+        task_id_col = ROW_KEYS.index("task_id") + 1
+        existing_task_ids = {
+            cell[0].value for cell in sheet.iter_rows(min_row=2, min_col=task_id_col, max_col=task_id_col)
+        }
         for row in rows:
+            if row["task_id"] in existing_task_ids:
+                log.warning(f"PrintLog: task {row['task_id']} already logged, skipping duplicate row")
+                continue
             sheet.append([row[key] for key in ROW_KEYS])
         workbook.save(self._path)
 

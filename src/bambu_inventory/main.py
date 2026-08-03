@@ -48,7 +48,19 @@ def run_poll_cycle(bambu: BambuClient, sheet: LocalSheetWriter, state: StateStor
         rows = task_to_rows(task)
         if rows:
             sheet.append_rows(rows)
-            sheet.sync_filament_inventory(rows)
+            # Inventory sync is best-effort and not task-scoped (it just
+            # ensures a formula/row exists per filament type+colour, which
+            # any future matching print will also refresh) - a failure here
+            # must not block state advancement, or this task would be
+            # re-appended to PrintLog on every retry.
+            try:
+                sheet.sync_filament_inventory(rows)
+            except Exception:
+                log.exception(
+                    f"Filament Inventory sync failed for task {task['id']}, "
+                    "PrintLog entry is saved; will retry inventory sync on the "
+                    "next print that uses a matching filament"
+                )
         state.set_last_seen_id(task["id"])
         log.info(f"Logged task {task['id']} ({task['title']}) - {len(rows)} row(s)")
 

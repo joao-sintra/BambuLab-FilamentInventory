@@ -63,6 +63,25 @@ def test_append_rows_appends_multiple_calls_without_overwriting(tmp_path):
     path = str(tmp_path / "inventory.xlsx")
     writer = LocalSheetWriter(path)
     writer.ensure_workbook()
+    row1 = {
+        "date": "d", "print_name": "p", "printer": "pr", "status": "finished",
+        "duration_min": 1, "ams_slot": "0-0", "filament_type": "PLA",
+        "colour_hex": "000000FF", "weight_g": 1.0, "task_id": "1",
+    }
+    row2 = {**row1, "task_id": "2"}
+
+    writer.append_rows([row1])
+    writer.append_rows([row2])
+
+    workbook = load_workbook(path)
+    sheet = workbook[SHEET_NAME]
+    assert sheet.max_row == 3
+
+
+def test_append_rows_skips_row_with_already_logged_task_id(tmp_path):
+    path = str(tmp_path / "inventory.xlsx")
+    writer = LocalSheetWriter(path)
+    writer.ensure_workbook()
     row = {
         "date": "d", "print_name": "p", "printer": "pr", "status": "finished",
         "duration_min": 1, "ams_slot": "0-0", "filament_type": "PLA",
@@ -74,7 +93,28 @@ def test_append_rows_appends_multiple_calls_without_overwriting(tmp_path):
 
     workbook = load_workbook(path)
     sheet = workbook[SHEET_NAME]
+    assert sheet.max_row == 2
+
+
+def test_append_rows_skips_only_the_duplicate_when_mixed_with_new_rows(tmp_path):
+    path = str(tmp_path / "inventory.xlsx")
+    writer = LocalSheetWriter(path)
+    writer.ensure_workbook()
+    row1 = {
+        "date": "d", "print_name": "p", "printer": "pr", "status": "finished",
+        "duration_min": 1, "ams_slot": "0-0", "filament_type": "PLA",
+        "colour_hex": "000000FF", "weight_g": 1.0, "task_id": "1",
+    }
+    row2 = {**row1, "task_id": "2"}
+
+    writer.append_rows([row1])
+    writer.append_rows([row1, row2])
+
+    workbook = load_workbook(path)
+    sheet = workbook[SHEET_NAME]
     assert sheet.max_row == 3
+    task_ids = [cell.value for cell in sheet["J"][1:] if cell.value is not None]
+    assert task_ids == ["1", "2"]
 
 
 def _make_row(filament_type="PLA", colour_hex="FF0000FF", weight_g=10.0):
