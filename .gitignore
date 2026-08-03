@@ -1,7 +1,8 @@
 .env
 .bambu_token.json
 state.json
-#filament_inventory.xlsx
+filament_inventory.xlsx
+~$*.xlsx
 __pycache__/
 *.pyc
 .pytest_cache/
