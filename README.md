@@ -22,17 +22,19 @@ finished/failed/cancelled print's per-colour filament weight to a local
 
 If the workbook has a tab named exactly `Filament Inventory` with columns
 `Filament Type | Colour | Total Weight (g) | Remaining Weight (g)`, the
-script automatically deducts each print's filament weight from the
-matching row's `Remaining Weight (g)` every time it logs a print to
-`PrintLog`. Matching is by exact `Filament Type` + `Colour` (the same hex
-code shown in `PrintLog`'s `Colour (hex)` column, e.g. `FF0000FF`).
+script keeps `Remaining Weight (g)` as a **live Excel formula** —
+`Total Weight (g)` minus the sum of every matching row in `PrintLog`
+(same `Filament Type` + `Colour`, the same hex code shown in `PrintLog`'s
+`Colour (hex)` column, e.g. `FF0000FF`) — rather than a number it
+recomputes and overwrites itself. That means editing a `Weight (g)` cell
+in `PrintLog` by hand, or any other row there, is reflected automatically
+the next time the sheet recalculates — no separate sync step needed.
 
 If a print uses a filament type/colour combination not already in the
-sheet, a new row is added automatically with `Total Weight (g)` left blank
-and `Remaining Weight (g)` starting negative (since nothing was tracked
-before that print). Fill in the real `Total Weight (g)` for a new spool
-once you notice a new row appear, so future deductions read against
-something meaningful.
+sheet, a new row is added automatically with `Total Weight (g)` left
+blank and the same live formula in `Remaining Weight (g)` (which will
+show a negative number until you fill in the real `Total Weight (g)` for
+that spool).
 
 If the `Filament Inventory` tab doesn't exist yet, it's created
 automatically on the first print that needs it.

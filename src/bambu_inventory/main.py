@@ -48,7 +48,7 @@ def run_poll_cycle(bambu: BambuClient, sheet: LocalSheetWriter, state: StateStor
         rows = task_to_rows(task)
         if rows:
             sheet.append_rows(rows)
-            sheet.deduct_filament_usage(rows)
+            sheet.sync_filament_inventory(rows)
         state.set_last_seen_id(task["id"])
         log.info(f"Logged task {task['id']} ({task['title']}) - {len(rows)} row(s)")
 

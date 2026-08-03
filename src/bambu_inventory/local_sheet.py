@@ -51,7 +51,12 @@ class LocalSheetWriter:
             sheet.append([row[key] for key in ROW_KEYS])
         workbook.save(self._path)
 
-    def deduct_filament_usage(self, rows: list[dict]) -> None:
+    def sync_filament_inventory(self, rows: list[dict]) -> None:
+        # Remaining Weight is a live formula (Total - SUMIFS of matching
+        # PrintLog rows), not a value this method computes and writes.
+        # That way hand-editing a Weight (g) cell in PrintLog - or any other
+        # PrintLog row - is reflected immediately, with no separate
+        # "deduct" step to keep in sync.
         workbook = load_workbook(self._path)
         if INVENTORY_SHEET_NAME not in workbook.sheetnames:
             sheet = workbook.create_sheet(INVENTORY_SHEET_NAME)
@@ -69,31 +74,21 @@ class LocalSheetWriter:
                     match = existing_row
                     break
 
-            if match is not None:
-                remaining_cell = match[INVENTORY_COL_REMAINING - 1]
-                total_cell = match[INVENTORY_COL_TOTAL - 1]
-                # Remaining Weight seeds from Total Weight the first time this
-                # spool is used (i.e. Remaining is still blank) rather than
-                # always starting from 0 - otherwise filling in Total Weight
-                # after the fact never corrects an already-negative Remaining.
-                if remaining_cell.value is None:
-                    baseline = total_cell.value if total_cell.value is not None else 0
-                else:
-                    baseline = remaining_cell.value
-                new_remaining = baseline - row["weight_g"]
-                remaining_cell.value = new_remaining
+            if match is None:
+                sheet.append([row["filament_type"], row["colour_hex"], "", None])
+                match = sheet[sheet.max_row]
                 log.info(
-                    f"Filament Inventory: {row['filament_type']} {row['colour_hex']} "
-                    f"-{row['weight_g']}g -> {new_remaining}g remaining"
+                    f"Filament Inventory: added new row for {row['filament_type']} "
+                    f"{row['colour_hex']}, fill in Total Weight (g) to track it"
                 )
-            else:
-                sheet.append([
-                    row["filament_type"], row["colour_hex"], "", -row["weight_g"],
-                ])
-                log.info(
-                    f"Filament Inventory: no matching row for {row['filament_type']} "
-                    f"{row['colour_hex']}, added new row (-{row['weight_g']}g, "
-                    f"fill in Total Weight (g) to track it properly)"
-                )
+
+            type_col = match[INVENTORY_COL_FILAMENT_TYPE - 1].coordinate
+            colour_col = match[INVENTORY_COL_COLOUR - 1].coordinate
+            total_col = match[INVENTORY_COL_TOTAL - 1].coordinate
+            remaining_cell = match[INVENTORY_COL_REMAINING - 1]
+            remaining_cell.value = (
+                f"={total_col}-SUMIFS({SHEET_NAME}!I:I,{SHEET_NAME}!G:G,{type_col},"
+                f"{SHEET_NAME}!H:H,{colour_col})"
+            )
 
         workbook.save(self._path)

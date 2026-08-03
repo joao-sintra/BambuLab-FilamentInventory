@@ -85,24 +85,25 @@ def _make_row(filament_type="PLA", colour_hex="FF0000FF", weight_g=10.0):
     }
 
 
-def test_deduct_filament_usage_subtracts_from_matching_row(tmp_path):
+def test_sync_filament_inventory_writes_formula_into_matching_row(tmp_path):
     path = str(tmp_path / "inventory.xlsx")
     workbook = Workbook()
     workbook.remove(workbook.active)
     sheet = workbook.create_sheet(INVENTORY_SHEET_NAME)
     sheet.append(INVENTORY_HEADER)
-    sheet.append(["PLA", "FF0000FF", 1000, 500])
+    sheet.append(["PLA", "FF0000FF", 1000, None])
     workbook.save(path)
 
     writer = LocalSheetWriter(path)
-    writer.deduct_filament_usage([_make_row(weight_g=12.5)])
+    writer.sync_filament_inventory([_make_row(weight_g=12.5)])
 
     result = load_workbook(path)
     sheet = result[INVENTORY_SHEET_NAME]
-    assert sheet.cell(row=2, column=4).value == 487.5
+    formula = sheet.cell(row=2, column=4).value
+    assert formula == "=C2-SUMIFS(PrintLog!I:I,PrintLog!G:G,A2,PrintLog!H:H,B2)"
 
 
-def test_deduct_filament_usage_creates_row_when_no_match(tmp_path):
+def test_sync_filament_inventory_creates_row_when_no_match(tmp_path):
     path = str(tmp_path / "inventory.xlsx")
     workbook = Workbook()
     workbook.remove(workbook.active)
@@ -111,65 +112,70 @@ def test_deduct_filament_usage_creates_row_when_no_match(tmp_path):
     workbook.save(path)
 
     writer = LocalSheetWriter(path)
-    writer.deduct_filament_usage([_make_row(filament_type="PETG", colour_hex="00FF00FF", weight_g=20.0)])
+    writer.sync_filament_inventory([_make_row(filament_type="PETG", colour_hex="00FF00FF", weight_g=20.0)])
 
     result = load_workbook(path)
     sheet = result[INVENTORY_SHEET_NAME]
     assert sheet.max_row == 2
     new_row = [cell.value for cell in sheet[2]]
-    assert new_row == ["PETG", "00FF00FF", None, -20.0]
+    assert new_row[0] == "PETG"
+    assert new_row[1] == "00FF00FF"
+    assert new_row[2] is None
+    assert new_row[3] == "=C2-SUMIFS(PrintLog!I:I,PrintLog!G:G,A2,PrintLog!H:H,B2)"
 
 
-def test_deduct_filament_usage_creates_inventory_sheet_if_missing(tmp_path):
+def test_sync_filament_inventory_creates_inventory_sheet_if_missing(tmp_path):
     path = str(tmp_path / "inventory.xlsx")
     writer = LocalSheetWriter(path)
     writer.ensure_workbook()
 
-    writer.deduct_filament_usage([_make_row(weight_g=5.0)])
+    writer.sync_filament_inventory([_make_row(weight_g=5.0)])
 
     result = load_workbook(path)
     assert INVENTORY_SHEET_NAME in result.sheetnames
     sheet = result[INVENTORY_SHEET_NAME]
     assert [cell.value for cell in sheet[1]] == INVENTORY_HEADER
-    assert [cell.value for cell in sheet[2]] == ["PLA", "FF0000FF", None, -5.0]
+    row = [cell.value for cell in sheet[2]]
+    assert row[0] == "PLA"
+    assert row[1] == "FF0000FF"
+    assert row[3] == "=C2-SUMIFS(PrintLog!I:I,PrintLog!G:G,A2,PrintLog!H:H,B2)"
 
 
-def test_deduct_filament_usage_matches_only_exact_type_and_colour(tmp_path):
+def test_sync_filament_inventory_matches_only_exact_type_and_colour(tmp_path):
     path = str(tmp_path / "inventory.xlsx")
     workbook = Workbook()
     workbook.remove(workbook.active)
     sheet = workbook.create_sheet(INVENTORY_SHEET_NAME)
     sheet.append(INVENTORY_HEADER)
-    sheet.append(["PLA", "0000FFFF", 1000, 500])
+    sheet.append(["PLA", "0000FFFF", 1000, None])
     workbook.save(path)
 
     writer = LocalSheetWriter(path)
-    writer.deduct_filament_usage([_make_row(filament_type="PLA", colour_hex="FF0000FF", weight_g=10.0)])
+    writer.sync_filament_inventory([_make_row(filament_type="PLA", colour_hex="FF0000FF", weight_g=10.0)])
 
     result = load_workbook(path)
     sheet = result[INVENTORY_SHEET_NAME]
     assert sheet.max_row == 3
-    assert sheet.cell(row=2, column=4).value == 500
-    assert [cell.value for cell in sheet[3]] == ["PLA", "FF0000FF", None, -10.0]
+    assert sheet.cell(row=2, column=4).value is None
+    new_row = [cell.value for cell in sheet[3]]
+    assert new_row[0] == "PLA"
+    assert new_row[1] == "FF0000FF"
+    assert new_row[3] == "=C3-SUMIFS(PrintLog!I:I,PrintLog!G:G,A3,PrintLog!H:H,B3)"
 
 
-def test_deduct_filament_usage_seeds_remaining_from_total_when_blank(tmp_path):
+def test_sync_filament_inventory_refreshes_formula_on_existing_row(tmp_path):
     path = str(tmp_path / "inventory.xlsx")
     workbook = Workbook()
     workbook.remove(workbook.active)
     sheet = workbook.create_sheet(INVENTORY_SHEET_NAME)
     sheet.append(INVENTORY_HEADER)
-    # row added earlier by auto-create (Total blank, Remaining negative);
-    # user has since filled in Total Weight but Remaining is still blank
-    # because auto-create only sets it negative, never blank+Total together -
-    # this simulates a row where the user typed Total Weight into a fresh
-    # row with Remaining left empty.
-    sheet.append(["PLA", "FF0000FF", 1000, None])
+    # simulates a row left over from the old numeric-deduction behaviour
+    sheet.append(["PLA", "FF0000FF", 1000, -42])
     workbook.save(path)
 
     writer = LocalSheetWriter(path)
-    writer.deduct_filament_usage([_make_row(weight_g=12.5)])
+    writer.sync_filament_inventory([_make_row(weight_g=12.5)])
 
     result = load_workbook(path)
     sheet = result[INVENTORY_SHEET_NAME]
-    assert sheet.cell(row=2, column=4).value == 987.5
+    assert sheet.cell(row=2, column=4).value == "=C2-SUMIFS(PrintLog!I:I,PrintLog!G:G,A2,PrintLog!H:H,B2)"
